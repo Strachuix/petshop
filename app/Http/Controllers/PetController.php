@@ -33,8 +33,6 @@ class PetController
         return view('pets');
     }
 
-
-
     public function getPet($id)
     {
         $response = Http::get("{$this->apiUrl}/pet/{$id}");
@@ -43,10 +41,8 @@ class PetController
             return view('find-pet', ['pet' => $response->json()]);
         }
 
-        return redirect()->route('find-pet')->withErrors(['error' => 'Pet not found']);
+        return redirect()->route('pets.find')->withErrors(['error' => 'Pet not found']);
     }
-
-
 
     public function createPet(Request $request)
     {
@@ -59,22 +55,50 @@ class PetController
         return redirect('/pets/add');
     }
 
-
-    public function updatePet(Request $request, $id)
+    public function updatePetForm($id)
     {
-        $response = Http::put("{$this->apiUrl}/pet", $request->all());
+        $response = Http::get("{$this->apiUrl}/pet/{$id}");
+        if ($response->successful()) {
+            return view('update-pet', ['pet' => $response->json()]);
+        }
 
-        return response()->json($response->json(), $response->status());
+        return redirect()->route('pets.find')->withErrors(['error' => 'Pet not found']);
     }
+
+
+    public function updatePet(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'status' => 'required|string|max:255',
+            'category' => 'required|string|max:255',
+        ]);
+        $id = $request->input('id');
+        $data = [
+            'id' => $id,
+            'name' => $request->input('name'),
+            'status' => $request->input('status'),
+            'category' => ['name' => $request->input('category')],
+        ];
+    
+        $response = Http::put("{$this->apiUrl}/pet", $data);
+    
+        if ($response->successful()) {
+            return redirect('/pets')->with('success', 'Pet updated successfully');
+        }
+    
+        return redirect('/pets/find')->with('error', 'Failed to update pet');
+    }
+    
 
     public function deletePet($id)
     {
         $response = Http::delete("{$this->apiUrl}/pet/{$id}");
 
         if ($response->successful()) {
-            return response()->json(['message' => 'Pet deleted successfully']);
+            return redirect()->route('pets.find')->with('success', 'Pet deleted successfully');
         }
 
-        return response()->json(['error' => 'Pet not found'], 404);
+        return redirect()->route('pets.find')->with('error', 'Pet not found');
     }
 }
